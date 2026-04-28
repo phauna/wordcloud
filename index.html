@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Cloud</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #262624; font-family: 'DM Mono', monospace; }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #cloud-area {
+      flex: 1;
+      position: relative;
+      background: #262624;
+      overflow: hidden;
+    }
+
+    #empty-msg {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      color: #9C9A92;
+      pointer-events: none;
+      font-family: 'DM Mono', monospace;
+    }
+
+    #cloud-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+    #controls {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      background: #262624;
+      padding: 10px 12px 12px;
+      border-top: 0.5px solid #3a3a38;
+    }
+
+    #text-input {
+      width: 100%;
+      min-height: 70px;
+      max-height: 140px;
+      padding: 10px 14px;
+      border: 0.5px solid #9C9A92;
+      border-radius: 8px;
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      color: #9C9A92;
+      background: #30302E;
+      resize: vertical;
+      line-height: 1.6;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #text-input:focus { border-color: #6b6a65; }
+    #text-input::placeholder { color: #5a5a56; }
+
+    #footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #262624;
+    }
+
+    #word-count { font-size: 12px; color: #9C9A92; margin: 0 5px 0 5px; }
+
+    #clear-btn {
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+      margin: 0 5px 0 5px;
+      padding: 5px 10px;
+      border: 0.5px solid #9C9A92;
+      border-radius: 8px;
+      background: transparent;
+      color: #9C9A92;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    #clear-btn:hover { background: #30302E; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="cloud-area">
+      <div id="empty-msg">type a phrase, press enter to add it to the cloud</div>
+      <canvas id="cloud-canvas"></canvas>
+    </div>
+    <div id="controls">
+      <textarea id="text-input" placeholder="_"></textarea>
+      <div id="footer">
+        <span id="word-count">0 phrases</span>
+        <button id="clear-btn">clear</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const COLORS = ['#534AB7','#0F6E56','#993C1D','#185FA5','#3B6D11','#993556','#BA7517','#A32D2D'];
+    const MAX_FONT = 60;
+    const MIN_FONT = 7;
+
+    const canvas = document.getElementById('cloud-canvas');
+    const ctx = canvas.getContext('2d');
+    const textarea = document.getElementById('text-input');
+    const emptyMsg = document.getElementById('empty-msg');
+    const wordCountEl = document.getElementById('word-count');
+    const clearBtn = document.getElementById('clear-btn');
+
+    let placedWords = [];
+    let animFrame = null;
+    let currentFontSize = MAX_FONT;
+
+    function getPhrases(text) {
+      return text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    }
+
+    function tryPlace(phrases, fontSize) {
+      const W = canvas.width, H = canvas.height;
+      const cx = W / 2, cy = H / 2;
+      const placed = [];
+      const occupied = [];
+
+      ctx.font = `400 ${fontSize}px Fraunces, serif`;
+      const lineH = fontSize * 1.3;
+
+      for (let i = 0; i < phrases.length; i++) {
+        const phrase = phrases[i];
+        const color = COLORS[i % COLORS.length];
+        const tw = ctx.measureText(phrase).width;
+        const th = fontSize;
+        let found = false;
+
+        for (let r = 0; r < Math.max(W, H) * 0.65; r += 2) {
+          const angle = r * 0.42 + (i * 1.3);
+          const testX = cx + r * Math.cos(angle) - tw / 2;
+          const testY = cy + r * Math.sin(angle) + th / 3;
+
+          if (testX < 4 || testX + tw > W - 4 || testY - th < 4 || testY > H - 4) continue;
+
+          const rect = { x: testX - 10, y: testY - th - 2, w: tw + 20, h: lineH };
+          const collides = occupied.some(o =>
+            rect.x < o.x + o.w && rect.x + rect.w > o.x &&
+            rect.y < o.y + o.h && rect.y + rect.h > o.y
+          );
+
+          if (!collides) {
+            occupied.push(rect);
+            placed.push({ phrase, color, x: testX, y: testY, alpha: 0, targetAlpha: 1 });
+            found = true;
+            break;
+          }
+        }
+
+        if (!found) return null;
+      }
+
+      return placed;
+    }
+
+    function placeWords(phrases) {
+      if (!phrases.length) return { placed: [], fontSize: MAX_FONT };
+
+      let fontSize = MAX_FONT;
+      let result = null;
+
+      while (fontSize >= MIN_FONT) {
+        result = tryPlace(phrases, fontSize);
+        if (result) return { placed: result, fontSize };
+        fontSize -= 1;
+      }
+
+      return { placed: result || [], fontSize };
+    }
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+
+    function draw(fontSize) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let stillAnimating = false;
+
+      placedWords.forEach(pw => {
+        if (pw.alpha < pw.targetAlpha) {
+          pw.alpha = Math.min(pw.alpha + 0.06, pw.targetAlpha);
+          stillAnimating = true;
+        }
+        ctx.globalAlpha = pw.alpha;
+        ctx.font = `400 ${fontSize}px Fraunces, serif`;
+        ctx.fillStyle = pw.color;
+        ctx.fillText(pw.phrase, pw.x, pw.y);
+      });
+
+      ctx.globalAlpha = 1;
+      if (stillAnimating) animFrame = requestAnimationFrame(() => draw(fontSize));
+    }
+
+    function update() {
+      const text = textarea.value;
+      const phrases = getPhrases(text);
+      const count = phrases.length;
+
+      wordCountEl.textContent = count === 0 ? '0 phrases' : `${count} phrase${count !== 1 ? 's' : ''}`;
+      emptyMsg.style.display = count === 0 ? 'flex' : 'none';
+
+      if (count === 0) {
+        placedWords = [];
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      const existing = new Map(placedWords.map(p => [p.phrase, p]));
+      const { placed, fontSize } = placeWords(phrases);
+      currentFontSize = fontSize;
+      placedWords = placed;
+      placedWords.forEach(pw => {
+        if (existing.has(pw.phrase)) pw.alpha = existing.get(pw.phrase).alpha;
+      });
+
+      if (animFrame) cancelAnimationFrame(animFrame);
+      animFrame = requestAnimationFrame(() => draw(currentFontSize));
+    }
+
+    textarea.addEventListener('input', update);
+
+    clearBtn.addEventListener('click', () => {
+      textarea.value = '';
+      placedWords = [];
+      currentFontSize = MAX_FONT;
+      emptyMsg.style.display = 'flex';
+      wordCountEl.textContent = '0 phrases';
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    window.addEventListener('resize', () => { resize(); update(); });
+
+    resize();
+  </script>
+</body>
+</html>
