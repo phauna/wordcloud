@@ -146,7 +146,7 @@
 
           if (testX < 4 || testX + tw > W - 4 || testY - th < 4 || testY > H - 4) continue;
 
-          const rect = { x: testX - 10, y: testY - th - 2, w: tw + 20, h: lineH };
+          const rect = { x: testX - 20, y: testY - th - 2, w: tw + 40, h: lineH };
           const collides = occupied.some(o =>
             rect.x < o.x + o.w && rect.x + rect.w > o.x &&
             rect.y < o.y + o.h && rect.y + rect.h > o.y
