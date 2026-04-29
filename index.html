@@ -5,11 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Word Cloud</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #262624; font-family: 'DM Mono', monospace; }
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'DM Mono', monospace; }
 
     #app {
       display: flex;
@@ -21,7 +19,7 @@
     #cloud-area {
       flex: 1;
       position: relative;
-      background: #262624;
+      background: white;
       overflow: hidden;
     }
 
@@ -41,7 +39,7 @@
       flex-direction: column;
       gap: 5px;
       background: #262624;
-      padding: 10px 12px 12px;
+      padding: 10px 10px 0 10px;
       border-top: 0.5px solid #3a3a38;
     }
 
@@ -49,13 +47,13 @@
       width: 100%;
       min-height: 70px;
       max-height: 140px;
-      padding: 10px 14px;
+      padding: 10px 15px;
       border: 0.5px solid #9C9A92;
       border-radius: 8px;
       font-family: 'DM Mono', monospace;
       font-size: 14px;
-      color: #9C9A92;
-      background: #30302E;
+      color: black;
+      background: white;
       resize: vertical;
       line-height: 1.6;
       outline: none;
@@ -63,7 +61,8 @@
     }
 
     #text-input:focus { border-color: #6b6a65; }
-    #text-input::placeholder { color: #5a5a56; }
+    #text-input:focus::placeholder { color: transparent;  }
+    #text-input::placeholder { color: #9C9A92; }
 
     #footer {
       display: flex;
@@ -72,13 +71,13 @@
       background: #262624;
     }
 
-    #word-count { font-size: 12px; color: #9C9A92; margin: 0 5px 0 5px; }
+    #word-count { font-size: 12px; color: #9C9A92; margin: 0; }
 
     #clear-btn {
       font-size: 12px;
       font-family: 'DM Mono', monospace;
-      margin: 0 5px 0 5px;
-      padding: 5px 10px;
+      margin: 5px 0;
+      padding: 5px;
       border: 0.5px solid #9C9A92;
       border-radius: 8px;
       background: transparent;
@@ -92,11 +91,11 @@
 <body>
   <div id="app">
     <div id="cloud-area">
-      <div id="empty-msg">type a phrase, press enter to add it to the cloud</div>
+      <div id="empty-msg">type a phrase and press enter to add it to the cloud</div>
       <canvas id="cloud-canvas"></canvas>
     </div>
     <div id="controls">
-      <textarea id="text-input" placeholder="_"></textarea>
+      <textarea id="text-input" placeholder="type phrase here"></textarea>
       <div id="footer">
         <span id="word-count">0 phrases</span>
         <button id="clear-btn">clear</button>
@@ -105,7 +104,7 @@
   </div>
 
   <script>
-    const COLORS = ['#534AB7','#0F6E56','#993C1D','#185FA5','#3B6D11','#993556','#BA7517','#A32D2D'];
+    const COLORS = ['#E91E63','#9C27B0','#3F51B5','#00897B','#F4511E','#039BE5','#7CB342','#F6BF26'];
     const MAX_FONT = 60;
     const MIN_FONT = 7;
 
